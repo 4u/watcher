@@ -1,8 +1,8 @@
 {
-  "name": "gcin",
+  "name": "watcher",
   "version": "0.0.1",
-  "description": "i18n for Google Closure",
-  "keywords": ["google closure", "i18n"],
+  "description": "File watcher",
+  "keywords": ["watcher"],
   "author": {
     "name": "Max Nikitin",
     "email": "max@rururu.me"
