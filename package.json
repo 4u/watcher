@@ -1,0 +1,26 @@
+{
+  "name": "gcin",
+  "version": "0.0.1",
+  "description": "i18n for Google Closure",
+  "keywords": ["google closure", "i18n"],
+  "author": {
+    "name": "Max Nikitin",
+    "email": "max@rururu.me"
+  },
+  "preferGlobal": true,
+  "private": false,
+  "dependencies": {
+    "chokidar": ">= 0.5.3",
+    "optimist": ">= 0.3.5"
+  },
+  "engines": {
+    "node": ">= 0.8.0"
+  },
+  "repository": "git://github.com/4u/watcher.git",
+  "directories": {
+    "bin": "./bin"
+  },
+  "bin": {
+    "watcher": "./bin/watcher"
+  }
+}

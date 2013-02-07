@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+
+var argv = require('optimist')
+  .usage('Watch folders for precompiling.\nUsage: $0 -config [config]')
+  .demand('config')
+  .alias('config', 'c')
+  .describe('c', 'Config file')
+  .argv;
+
+var Watcher = require('../index').Watcher;
+
+var configData = require('fs').readFileSync(argv.config);
+eval("var config = (" + configData + ")");
+
+var watcher = new Watcher(config);
+watcher.watch();

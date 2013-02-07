@@ -1,0 +1,45 @@
+{
+  /**
+   * Command will run before watching. You can use it
+   * for instilling env, like {@code source ~/.bash_profile}
+  */
+  "INITIAL_COMMAND": "source ~/.bash_profile",
+
+  /**
+   * Path to directory. Can be relative 
+  */
+  "path/to/scss": {
+
+    /**
+     * Command or stack of commands. You can use $WATCHER_PATH, $WATCHER_FILENAME
+     * and $WATCHER_DIRNAME
+     * Exmaple: {@code "do": "echo $WATCHER_FILENAME"}
+     * @type {string|
+     *    {mask: RegExp|undefined, command: string, delay: number|undefined}|
+     *    Array.<{mask: RegExp|undefined, command: string, delay: number|undefined}>}  
+    */
+    "do": [{
+      "mask": /\.scss$/,
+      "command": "sass $WATCHER_PATH ${WATCHER_PATH}.css",
+      /** Delay for stacking operations. Default: 0 */
+      "delay": 0
+    }],
+
+    /** RegExp for ignoring */
+    "ignored": /^\./,
+
+    /** RegExp for mask of files */
+    "mask": /^\./,
+
+    /** Options for {@code https://github.com/paulmillr/chokidar} */
+    "options": {
+      // "ignoreInitial": true,
+      "ignorePermissionErrors": true,
+      "interval": 100,
+      "persistent": true
+    },
+
+    /** Delay for stacking operations. Default: 0 */
+    "delay": 0
+  }
+}
