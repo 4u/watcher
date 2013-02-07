@@ -22,21 +22,26 @@ Watcher.prototype.watch = function() {
   for(var path in this._config) {
     var config = this._config[path];
     var watcher = chokidar.watch(path, config.options);
+    this._listen(watcher, path);
     this._watchers.push(watcher);
-
-    watcher
-      .on('all', (function(type, file) {
-        this._onAll(type, file, path, watcher);
-      }).bind(this))
-      .on('error', (function(error) {
-        this._onError(error, config, watcher);
-      }).bind(this));
   }
 };
 
 Watcher.prototype.close = function() {
-  this._chokidar.close();
-  this._chokidar = null;
+  this._watchers.forEach(function(watcher) {
+    watcher.close();
+  });
+  this._watchers = [];
+};
+
+Watcher.prototype._listen = function(watcher, path) {
+  watcher
+    .on('all', (function(type, file) {
+      this._onAll(type, file, path, watcher);
+    }).bind(this))
+    .on('error', (function(error) {
+      this._onError(error, path, watcher);
+    }).bind(this));
 };
 
 Watcher.prototype._onAll = function(type, file, dir, watcher) {
@@ -95,7 +100,7 @@ Watcher.prototype._onAll = function(type, file, dir, watcher) {
   }
 };
 
-Watcher.prototype._onError = function(error) {
+Watcher.prototype._onError = function(error, dir, watcher) {
   process.stderr.write(font.colorize(font.c.Red, error));
 };
 
