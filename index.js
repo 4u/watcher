@@ -7,7 +7,18 @@ var Watcher = function(config) {
 };
 
 Watcher.prototype.watch = function() {
+  var spawn = require('child_process').spawn;
   var chokidar = require('chokidar');
+
+  this._bash = spawn('bash');
+
+  this._bash.stdout.on('data', function (data) {
+    process.stdout.write(data);
+  });
+
+  this._bash.stderr.on('data', function (data) {
+    process.stderr.write(font.colorize(font.c.Red, data));
+  });
 
   this._watchers = [];
 
@@ -16,7 +27,7 @@ Watcher.prototype.watch = function() {
     delete this._config.INITIAL_COMMAND;
 
     process.stdout.write(font.colorize(font.c.Green, "INITIAL: ") + initial + "\n");
-    exec(initial, this._printExecResult);
+    this._bash.stdin.write(initial + "\n");
   }
 
   for(var path in this._config) {
@@ -32,6 +43,8 @@ Watcher.prototype.close = function() {
     watcher.close();
   });
   this._watchers = [];
+
+  this._bash.stdin.end();
 };
 
 Watcher.prototype._listen = function(watcher, path) {
@@ -107,9 +120,7 @@ Watcher.prototype._onError = function(error, dir, watcher) {
 Watcher.prototype._exec = function(command, opt_delay, opt_path) {
   var execFunc = (function() {
     process.stdout.write(font.colorize(font.c.Green, "RUN: ") + command + "\n");
-    exec(command, {
-      env: opt_path ? this._getEnv(opt_path) : {}
-    }, this._printExecResult);
+    this._bash.stdin.write(this._definedEnv(opt_path) + command + "\n");
   }).bind(this);
 
   if (opt_delay) {
@@ -130,13 +141,17 @@ Watcher.prototype._printExecResult = function(error, stdout, stderr) {
   }
 };
 
-Watcher.prototype._getEnv = function(path) {
+Watcher.prototype._definedEnv = function(path) {
+  if (!path) {
+    return '';
+  }
+
   var p = require('path');
-  return {
-    WATCHER_PATH: path,
-    WATCHER_DIRNAME: p.dirname(path),
-    WATCHER_FILENAME: p.basename(path)
-  };
+  return [
+    "WATCHER_PATH=" + path,
+    "WATCHER_DIRNAME=" + p.dirname(path),
+    "WATCHER_FILENAME=" + p.basename(path)
+  ].join(';') + ';';
 };
 
 exports.Watcher = Watcher;
