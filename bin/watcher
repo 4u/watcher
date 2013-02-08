@@ -14,3 +14,17 @@ eval("var config = (" + configData + ")");
 
 var watcher = new Watcher(config);
 watcher.watch();
+
+process.on('exit', function () {
+  watcher.close();
+});
+
+process.on('SIGINT', function () {
+  process.stdout.write('Got SIGINT\n');
+  watcher.close();
+});
+
+process.on('uncaughtException', function () {
+  process.stdout.write('Caught exception: ' + err);
+  watcher.watch();
+});

@@ -39,12 +39,15 @@ Watcher.prototype.watch = function() {
 };
 
 Watcher.prototype.close = function() {
+  process.stdout.write("Closing child watchers\n");
   this._watchers.forEach(function(watcher) {
     watcher.close();
   });
   this._watchers = [];
 
+  process.stdout.write("Closing child process for commands\n");
   this._bash.stdin.end();
+  process.stdout.write("See you!\n");
 };
 
 Watcher.prototype._listen = function(watcher, path) {
