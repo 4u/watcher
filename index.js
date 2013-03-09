@@ -81,7 +81,7 @@ Watcher.prototype._onAll = function(type, file, dir, watcher) {
   var tokens = config['do'] || config['command'];
 
   // has only string command
-  if (typeof tokens == "string") {
+  if (typeof tokens == "string" || typeof tokens == "function") {
     process.stdout.write(font.colorize(font.c.Green, "UPDATE: ") + file + "\n");
     this._timers[dir] = this._exec(tokens, config.delay, file);
     return;
@@ -124,7 +124,7 @@ Watcher.prototype._exec = function(command, opt_delay, opt_path) {
   var execFunc = (function() {
     process.stdout.write(font.colorize(font.c.Green, "RUN: ") + command + "\n");
     if (typeof command == 'function') {
-      command(path);
+      command(opt_path);
     } else {
       this._bash.stdin.write(this._definedEnv(opt_path) + command + "\n");
     }
