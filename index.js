@@ -123,7 +123,11 @@ Watcher.prototype._onError = function(error, dir, watcher) {
 Watcher.prototype._exec = function(command, opt_delay, opt_path) {
   var execFunc = (function() {
     process.stdout.write(font.colorize(font.c.Green, "RUN: ") + command + "\n");
-    this._bash.stdin.write(this._definedEnv(opt_path) + command + "\n");
+    if (typeof command == 'function') {
+      command(path);
+    } else {
+      this._bash.stdin.write(this._definedEnv(opt_path) + command + "\n");
+    }
   }).bind(this);
 
   if (opt_delay) {
