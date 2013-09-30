@@ -4,6 +4,18 @@ var font = require('./font');
 var Watcher = function(config) {
   this._config = config;
   this._timers = {};
+  this._warn = Watcher.Warn.ALL;
+};
+
+Watcher.Warn = {
+  ALL: 10,
+  VERBOSE: 10,
+  NORMAL: 9,
+  QUIET: 0
+};
+
+Watcher.prototype.warn = function(warn) {
+  this._warn = warn;
 };
 
 Watcher.prototype.watch = function() {
@@ -12,13 +24,13 @@ Watcher.prototype.watch = function() {
 
   this._bash = spawn('bash');
 
-  this._bash.stdout.on('data', function (data) {
-    process.stdout.write(data);
-  });
+  this._bash.stdout.on('data', (function (data) {
+    this.write(process.stdout, data, Watcher.Warn.NORMAL);
+  }).bind(this));
 
-  this._bash.stderr.on('data', function (data) {
-    process.stderr.write(font.colorize(font.c.Red, data));
-  });
+  this._bash.stderr.on('data', (function (data) {
+    this.write(process.stderr, font.colorize(font.c.Red, data), Watcher.Warn.NORMAL);
+  }).bind(this));
 
   this._watchers = [];
 
@@ -26,28 +38,42 @@ Watcher.prototype.watch = function() {
     var initial = this._config.INITIAL_COMMAND;
     delete this._config.INITIAL_COMMAND;
 
-    process.stdout.write(font.colorize(font.c.Green, "INITIAL: ") + initial + "\n");
+    this.write(process.stdout, font.colorize(font.c.Green, "INITIAL: ") + initial + "\n", Watcher.Warn.NORMAL);
     this._bash.stdin.write(initial + "\n");
   }
 
   for(var path in this._config) {
     var config = this._config[path];
+    (config['do'] || [config]).forEach(function(token) {
+      if (token.initialExec && token.command) {
+        this.write(process.stdout, font.colorize(font.c.Green, "INITIAL RUN: ") + token.command + "\n", Watcher.Warn.NORMAL);
+        this._exec(token.command);
+      }
+    }, this);
     var watcher = chokidar.watch(path, config.options);
     this._listen(watcher, path);
     this._watchers.push(watcher);
   }
 };
 
+
+
+Watcher.prototype.write = function(writer, str, lvl) {
+  if (lvl < this._warn) {
+    writer.write(str);
+  }
+}
+
 Watcher.prototype.close = function() {
-  process.stdout.write("Closing child watchers\n");
+  this.write(process.stdout, "Closing child watchers\n", Watcher.Warn.NORMAL);
   this._watchers.forEach(function(watcher) {
     watcher.close();
   });
   this._watchers = [];
 
-  process.stdout.write("Closing child process for commands\n");
+  this.write(process.stdout, "Closing child process for commands\n", Watcher.Warn.NORMAL);
   this._bash.stdin.end();
-  process.stdout.write("See you!\n");
+  this.write(process.stdout, "See you!\n", Watcher.Warn.NORMAL);
 };
 
 Watcher.prototype._listen = function(watcher, path) {
@@ -65,13 +91,14 @@ Watcher.prototype._onAll = function(type, file, dir, watcher) {
 
   // ignoring
   if (config.ignored && config.ignored.test(file)) {
+    this.write(process.stdout, font.colorize(font.c.Red, "IGNORED: ") + file + "\n", Watcher.Warn.VERBOSE);
     process.stdout.write(font.colorize(font.c.Red, "IGNORED: ") + file + "\n");
     return;
   }
 
   // track by mask if defined
   if (config.mask && !config.mask.test(file)) {
-    process.stdout.write(font.colorize(font.c.Red, "IGNORED: ") + file + "\n");
+    this.write(process.stdout, font.colorize(font.c.Red, "IGNORED: ") + file + "\n", Watcher.Warn.VERBOSE);
     return;
   }
 
@@ -82,7 +109,7 @@ Watcher.prototype._onAll = function(type, file, dir, watcher) {
 
   // has only string command
   if (typeof tokens == "string" || typeof tokens == "function") {
-    process.stdout.write(font.colorize(font.c.Green, "UPDATE: ") + file + "\n");
+    this.write(process.stdout, font.colorize(font.c.Green, "UPDATE: ") + file + "\n", Watcher.Warn.NORMAL);
     this._timers[dir] = this._exec(tokens, config.delay, file);
     return;
   }
@@ -104,7 +131,7 @@ Watcher.prototype._onAll = function(type, file, dir, watcher) {
     delete this._timers[timerName];
 
     if (!hasRunnedCommand) {
-      process.stdout.write(font.colorize(font.c.Green, "UPDATE: ") + file + "\n");
+      this.write(process.stdout, font.colorize(font.c.Green, "UPDATE: ") + file + "\n", Watcher.Warn.NORMAL);
       hasRunnedCommand = true;
     }
     this._timers[timerName] = this._exec(token.command, token.delay || config.delay, file);
@@ -112,17 +139,17 @@ Watcher.prototype._onAll = function(type, file, dir, watcher) {
 
   // has no runned commands
   if (!hasRunnedCommand) {
-    process.stdout.write(font.colorize(font.c.Red, "IGNORED: ") + file + "\n");
+    this.write(process.stdout, font.colorize(font.c.Red, "IGNORED: ") + file + "\n", Watcher.Warn.VERBOSE);
   }
 };
 
 Watcher.prototype._onError = function(error, dir, watcher) {
-  process.stderr.write(font.colorize(font.c.Red, error));
+  this.write(process.stderr, font.colorize(font.c.Red, error), Watcher.Warn.VERBOSE);
 };
 
 Watcher.prototype._exec = function(command, opt_delay, opt_path) {
   var execFunc = (function() {
-    process.stdout.write(font.colorize(font.c.Green, "RUN: ") + command + "\n");
+    this.write(process.stdout, font.colorize(font.c.Green, "RUN: ") + command + "\n", Watcher.Warn.VERBOSE);
     if (typeof command == 'function') {
       command(opt_path);
     } else {
@@ -136,16 +163,6 @@ Watcher.prototype._exec = function(command, opt_delay, opt_path) {
 
   execFunc();
   return -1;
-};
-
-Watcher.prototype._printExecResult = function(error, stdout, stderr) {
-  if (stdout) {
-    process.stdout.write(stdout);
-  } else if (stderr) {
-    process.stderr.write(font.colorize(font.c.Red, stderr));
-  } else if (error !== null) {
-    process.stderr.write(font.colorize(font.c.Red, error));
-  }
 };
 
 Watcher.prototype._definedEnv = function(path) {
